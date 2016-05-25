@@ -1,0 +1,82 @@
+---
+title: "Practical Machine Learning Course Project"
+author: "Francis     D"
+date: "April 23, 2016"
+output: html_document
+---
+##Introduction
+In this project I decided to use the Random Forest Model to predict the classe variable as required in the assignment since this seems to be a classification problem. I split the original training data into a sub training as myTraindata and test data as myTestdata respectively. I removed columns with NA's and other irrelevant variables. I then used confusion matrix to determine the accuracy of the model and finally used the model to predict the original test data.
+
+## Loading Data and Packages Needed
+```{r}
+library(caret)
+library(ggplot2)
+
+training <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"),na.strings=c("NA","#DIV/0",""))
+testing <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"),na.strings=c("NA","#DIV/0",""))
+
+ qplot(classe,data=training,main="Histogram of Classe variable")
+```
+
+
+The dimenions of the training and the testing data are
+
+```{r echo=FALSE}
+ dim(training)
+ dim(testing)
+```
+ 
+##Cleaning the Data
+
+Removed columns full of NA's and omitted the first seven columns since 
+they would not be relevant in predicting  the classe varaibles. This is done to both the training and testing sets to ensure the same variables.
+
+```{r}
+RemainingCols<- names(testing[,colSums(is.na(testing))== 0])[8:59]
+TR<- training[ , c(RemainingCols,"classe")]#Original training set
+TE<- testing[ , c(RemainingCols,"problem_id")]# Original Test set
+```
+
+##Splitting the Training Data(TR)
+Here I split Training Data into  sub Train and Test data respectively in oder
+to account for cross validation.
+
+```{r }
+set.seed(2465)
+
+inTrain <- createDataPartition(TR$classe, p=0.7,list=FALSE)
+myTraindata<- TR[inTrain,]
+myTestdata <- TR[-inTrain,]
+```
+
+Again the dimensions of the training and test data are
+
+```{r echo=FALSE}
+dim(myTraindata)
+dim(myTestdata)
+```
+
+
+
+##Building the Model
+
+I chose to use the random forest model because it was easier to run
+in my R consol. Tried boosting model GBM but run into some difficulties.
+Nevertheless, the Random Forest model gave 99.29% accuracy.
+
+```{r}
+CRF1 <- trainControl(method="cv", 5)##perfporming 5-fold cross validation
+myModelRF<- train(classe~., data=myTraindata, method="rf", rtControl=CRF1, ntree = 250)
+fitRF <- predict(myModelRF,myTestdata)
+
+confusionMatrix(fitRF,myTestdata$classe)
+```
+
+It can be observed that out of sample error is about .71%. The sensitivity and specificity  values are high as well.
+
+##Predicting the Original Test Data(TE)
+```{r}
+Submitresults<- predict(myModelRF,TE)
+Submitresults
+```
+
